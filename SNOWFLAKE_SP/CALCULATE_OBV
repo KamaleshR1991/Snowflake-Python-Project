@@ -1,0 +1,74 @@
+-- ============================================================================
+-- Procedure Name : CALCULATE_OBV
+-- Schema         : NSE_DATA.EQUITY_DATA
+-- Author         : Kamalesh R.
+-- Created On     : 08-Sep-2025
+-- Description    : 
+--     Calculates the On-Balance Volume (OBV) indicator for each SYMBOL using
+--     historical CLOSE prices and traded volume (TOTTRDQTY) from NSE_STAGE.
+--     Steps:
+--       1. Deletes existing OBV data from OBV_FEATURES.
+--       2. Calculates OBV using price-volume relationship.
+--       3. Inserts the computed OBV values into OBV_FEATURES.
+--     Returns a message confirming completion.
+-- ============================================================================
+
+CREATE OR REPLACE PROCEDURE NSE_DATA.EQUITY_DATA.CALCULATE_OBV()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+BEGIN
+
+  -- Delete existing data to refresh
+  DELETE FROM NSE_DATA.EQUITY_DATA.OBV_FEATURES;
+
+  -- OBV Calculation and Insertion
+  INSERT INTO NSE_DATA.EQUITY_DATA.OBV_FEATURES
+  WITH bhav_lagged AS (
+    SELECT
+      SYMBOL,
+      TIMESTAMP,
+      CLOSE,
+      TOTTRDQTY AS VOLUME,
+      LAG(CLOSE) OVER (PARTITION BY SYMBOL ORDER BY TIMESTAMP) AS PREV_CLOSE
+    FROM NSE_DATA.EQUITY_DATA.NSE_STAGE
+    WHERE TOTTRDQTY IS NOT NULL AND CLOSE IS NOT NULL
+  ),
+
+  obv_signal AS (
+    SELECT *,
+      CASE
+        WHEN CLOSE > PREV_CLOSE THEN VOLUME
+        WHEN CLOSE < PREV_CLOSE THEN -VOLUME
+        ELSE 0
+      END AS OBV_DELTA
+    FROM bhav_lagged
+  ),
+
+  obv_calculated AS (
+    SELECT
+      SYMBOL,
+      TIMESTAMP,
+      CLOSE,
+      VOLUME,
+      SUM(OBV_DELTA) OVER (
+        PARTITION BY SYMBOL
+        ORDER BY TIMESTAMP
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+      ) AS OBV
+    FROM obv_signal
+  )
+
+  SELECT
+    SYMBOL,
+    TIMESTAMP,
+    CLOSE,
+    VOLUME,
+    OBV
+  FROM obv_calculated;
+
+  RETURN ''OBV calculation and load complete'';
+
+END;
+';
