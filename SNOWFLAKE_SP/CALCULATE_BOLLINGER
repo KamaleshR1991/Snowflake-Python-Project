@@ -1,0 +1,71 @@
+-- ============================================================================
+-- Procedure Name : CALCULATE_BOLLINGER
+-- Schema         : NSE_DATA.EQUITY_DATA
+-- Author         : Kamalesh R.
+-- Created On     : 08-Sep-2025
+-- Description    : 
+--     Calculates Bollinger Bands for each SYMBOL based on the last 20 days of
+--     closing prices from the NSE_STAGE table. Bollinger Bands consist of:
+--       - Middle Band: 20-day Simple Moving Average (SMA)
+--       - Upper Band : SMA + 2 * standard deviation
+--       - Lower Band : SMA - 2 * standard deviation
+--     Steps:
+--       1. Deletes existing data from BOLLINGER_BANDS.
+--       2. Calculates the moving average and standard deviation.
+--       3. Inserts the upper, middle, and lower bands into BOLLINGER_BANDS.
+--     Returns a message confirming successful completion.
+-- ============================================================================
+
+CREATE OR REPLACE PROCEDURE NSE_DATA.EQUITY_DATA.CALCULATE_BOLLINGER()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+BEGIN
+
+  -- Optional: clear previous data
+  DELETE FROM NSE_DATA.EQUITY_DATA.BOLLINGER_BANDS;
+
+  -- Insert new Bollinger Band data
+  INSERT INTO NSE_DATA.EQUITY_DATA.BOLLINGER_BANDS
+  WITH bollinger_base AS (
+    SELECT
+      SYMBOL,
+      TIMESTAMP,
+      CLOSE,
+
+      -- 20-day moving average
+      AVG(CLOSE) OVER (
+        PARTITION BY SYMBOL
+        ORDER BY TIMESTAMP
+        ROWS BETWEEN 19 PRECEDING AND CURRENT ROW
+      ) AS MA_20,
+
+      -- 20-day standard deviation
+      STDDEV(CLOSE) OVER (
+        PARTITION BY SYMBOL
+        ORDER BY TIMESTAMP
+        ROWS BETWEEN 19 PRECEDING AND CURRENT ROW
+      ) AS STDDEV_20
+
+    FROM NSE_DATA.EQUITY_DATA.NSE_STAGE
+    WHERE CLOSE IS NOT NULL
+  ),
+
+  bollinger_calc AS (
+    SELECT
+      SYMBOL,
+      TIMESTAMP,
+      CLOSE,
+      MA_20 AS MIDDLE_BAND,
+      MA_20 + 2 * STDDEV_20 AS UPPER_BAND,
+      MA_20 - 2 * STDDEV_20 AS LOWER_BAND
+    FROM bollinger_base
+  )
+
+  SELECT * FROM bollinger_calc;
+
+  RETURN ''Bollinger Bands calculation complete.'';
+
+END;
+';
