@@ -1,0 +1,17 @@
+-- ============================================================================
+-- TABLE Name     : BOLLINGER_BANDS
+-- Schema         : NSE_DATA.EQUITY_DATA
+-- Author         : Kamalesh R.
+-- Created On     : 08-Sep-2025
+-- Description    : 
+--                  Table to store Bollinger_bands data
+-- ============================================================================
+
+create or replace TABLE NSE_DATA.EQUITY_DATA.BOLLINGER_BANDS (
+	SYMBOL VARCHAR(16777216),
+	TIMESTAMP DATE,
+	CLOSE FLOAT,
+	MIDDLE_BAND FLOAT,
+	UPPER_BAND FLOAT,
+	LOWER_BAND FLOAT
+);
