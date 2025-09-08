@@ -1,0 +1,78 @@
+-- ============================================================================
+-- Procedure Name : LOAD_BHAV_COPY
+-- Schema         : NSE_DATA.EQUITY_DATA
+-- Author         : Kamalesh R.
+-- Created On     : 08-Sep-2025
+-- Description    : 
+--     Loads daily Bhav Copy data from the staging table (BHAV_STAGE) into 
+--     the main table (BHAV), while maintaining the IS_LATEST flag per ISIN.
+--     Steps:
+--       1. Sets IS_LATEST = FALSE for all existing latest records.
+--       2. Inserts new records from BHAV_STAGE into BHAV with IS_LATEST = FALSE.
+--       3. Updates IS_LATEST = TRUE for the latest TIMESTAMP per ISIN.
+--     Returns a confirmation message on successful update.
+-- ============================================================================
+
+CREATE OR REPLACE PROCEDURE NSE_DATA.EQUITY_DATA.LOAD_BHAV_COPY()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+BEGIN
+
+    -- Step 1: Mark previously latest records as not latest
+    UPDATE NSE_DATA.EQUITY_DATA.BHAV AS tgt
+    SET IS_LATEST = FALSE
+    WHERE (ISIN, TIMESTAMP) IN (
+        SELECT ISIN, MAX(TIMESTAMP)
+        FROM NSE_DATA.EQUITY_DATA.BHAV
+        GROUP BY ISIN
+    );
+    
+    -- Step 2: Insert new records from BHAV_STAGE
+    INSERT INTO NSE_DATA.EQUITY_DATA.BHAV (
+        SYMBOL,
+        SERIES,
+        OPEN,
+        HIGH,
+        LOW,
+        CLOSE,
+        LAST,
+        PREVCLOSE,
+        TOTTRDQTY,
+        TOTTRDVAL,
+        TIMESTAMP,
+        TOTALTRADES,
+        ISIN,
+        IS_LATEST
+    )
+    SELECT
+        SYMBOL,
+        SERIES,
+        OPEN,
+        HIGH,
+        LOW,
+        CLOSE,
+        LAST,
+        PREVCLOSE,
+        TOTTRDQTY,
+        TOTTRDVAL,
+        TIMESTAMP,
+        TOTALTRADES,
+        ISIN,
+        FALSE
+    FROM NSE_DATA.EQUITY_DATA.BHAV_STAGE;
+
+    -- Step 3: Mark latest records as IS_LATEST = TRUE
+    UPDATE NSE_DATA.EQUITY_DATA.BHAV AS tgt
+    SET IS_LATEST = TRUE
+    WHERE (ISIN, TIMESTAMP) IN (
+        SELECT ISIN, MAX(TIMESTAMP)
+        FROM NSE_DATA.EQUITY_DATA.BHAV
+        GROUP BY ISIN
+    );
+
+    RETURN ''Records inserted and IS_LATEST flags updated successfully.'';
+
+END;
+';
