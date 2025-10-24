@@ -1,0 +1,40 @@
+Snowflake Performance Tuning Techniques
+1. Use the Right Warehouse Size
+2. Use Result Caching
+3. Query Optimization
+4. Clustering Keys (for Large Tables)
+5. Partition Pruning / Micro-Partition Awareness
+6. Materialized Views
+7. Warehouse Concurrency Scaling
+8. Use Task Scheduling Instead of Manual Refresh
+9. Avoid Overuse of Semi-Structured Data Functions
+10. Optimize File Ingestion (External Stage, Snowpipe)
+11. Monitoring & Profiling
+12. Use COPY INTO Performance Features
+13. Minimize Data Movement
+14. Use Temporary and Transient Tables Wisely
+15. Use Data Compression & File Formats
+1. Optimizing ETL Pipelines in Snowflake
+- Use Streams & Tasks for Incremental Loads
+- Use Staging Tables (Transient/Temporary)
+- Push Down Processing
+- Partitioned File Loads
+- Optimize JOINs
+- Pipeline Monitoring
+2. Reducing BI Dashboard Latency
+- Use Materialized Views for Aggregates
+- Optimize Query Design
+- Use Clustering for High-Cardinality Filters
+- Precompute Dashboards Using Snapshot Tables
+- Enable Query Caching
+- Use Dedicated BI Warehouse
+3. Real-Time Data Ingestion with Streams & Tasks
+- Create a Stream on the Raw Table
+- Task for Micro-Batch Processing
+- Chain Tasks for Multi-Step Pipelines
+- Monitoring Real-Time Pipelines
+- Bonus Tips:
+* Use APPEND_ONLY Streams
+* Keep Micro-Batches Short
+* Dedicate a Small Warehouse
+* Handle Duplicate Log
