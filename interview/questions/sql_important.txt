@@ -1,3 +1,75 @@
-CTE and it types.
-windows_functions
-lead and lag functions 
+-->CTE and it types.
+-->windows_functions
+-->lead and lag functions 
+-->how to find employee salary greater than manager
+CREATE OR REPLACE TABLE employees (
+    emp_id INT,
+    emp_name STRING,
+    manager_id INT,
+    salary FLOAT
+);
+
+INSERT INTO employees (emp_id, emp_name, manager_id, salary) VALUES
+(1, 'Alice', NULL, 200000),    -- CEO
+(2, 'Bob', 1, 150000),         -- Reports to Alice
+(3, 'Charlie', 1, 210000),     -- Reports to Alice
+(4, 'David', 2, 160000),       -- Reports to Bob
+(5, 'Eve', 2, 140000),         -- Reports to Bob
+(6, 'Frank', 3, 220000),       -- Reports to Charlie
+(7, 'Grace', 3, 190000);       -- Reports to Charlie
+
+SELECT
+    e.emp_id,
+    e.emp_name,
+    e.salary AS emp_salary,
+    m.emp_name AS manager_name,
+    m.salary AS manager_salary
+FROM employees e
+LEFT JOIN employees m
+    ON e.manager_id = m.emp_id
+WHERE e.salary > m.salary;
+
+--> Maager and there reporting  recursive sql: 
+
+CREATE OR REPLACE TABLE employees (
+    emp_id INT,
+    emp_name STRING,
+    manager_id INT
+);
+
+INSERT INTO employees (emp_id, emp_name, manager_id) VALUES
+(1, 'Alice', NULL),    -- CEO
+(2, 'Bob', 1),         -- Reports to Alice
+(3, 'Charlie', 1),     -- Reports to Alice
+(4, 'David', 2),       -- Reports to Bob
+(5, 'Eve', 2),         -- Reports to Bob
+(6, 'Frank', 3),       -- Reports to Charlie
+(7, 'Grace', 3);       -- Reports to Charlie
+
+WITH RECURSIVE emp_hierarchy AS (
+    -- Anchor: top-level employees (no manager)
+    SELECT
+        emp_id,
+        emp_name,
+        manager_id,
+        CAST(NULL AS STRING) AS manager_name
+    FROM employees
+    WHERE manager_id IS NULL
+
+    UNION ALL
+
+    -- Recursive: join employees to their manager
+    SELECT
+        e.emp_id,
+        e.emp_name,
+        e.manager_id,
+        h.emp_name AS manager_name
+    FROM employees e
+    INNER JOIN emp_hierarchy h
+        ON e.manager_id = h.emp_id
+)
+SELECT *
+FROM emp_hierarchy
+ORDER BY emp_id;
+
+
