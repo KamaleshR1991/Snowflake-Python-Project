@@ -9,8 +9,7 @@ logger = logging.getLogger("bhav_logger")
 logger.setLevel(logging.INFO)
 
 def run_bhav_downloader(**kwargs):
-    date = kwargs.get('date', datetime.today().strftime('%Y-%m-%d'))
-    cmd = ['python', '/opt/airflow/dags/bhav_data_downloader.py', date]
+    cmd = ['python', '/opt/airflow/dags/bhav_data_downloader.py']
 
     try:
         # Capture stdout and stderr
@@ -24,7 +23,7 @@ def run_bhav_downloader(**kwargs):
         logger.error("Stderr:\n%s", e.stderr)
         raise  # re-raise to mark the task as FAILED
 
-# Example DAG
+# DAG definition
 with DAG(
     dag_id="bhav_data_downloader_dag",
     start_date=datetime(2025, 10, 26),
@@ -36,5 +35,4 @@ with DAG(
     run_bhav_task = PythonOperator(
         task_id="run_bhav_script",
         python_callable=run_bhav_downloader,
-        op_kwargs={"date": "2025-10-23"},  # or pass via Airflow macros
     )
