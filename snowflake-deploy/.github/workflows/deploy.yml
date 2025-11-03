@@ -1,1 +1,39 @@
+name: Deploy Snowflake SQL
 
+on:
+  push:
+    branches:
+      - main    # deploy when main branch changes
+      - prod    # optional: deploy when prod branch changes
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install SnowSQL
+        run: |
+          wget https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/latest/linux_x86_64/snowsql
+          chmod +x snowsql
+          ./snowsql --version
+
+      - name: Deploy SQL files to Snowflake
+        env:
+          SNOWSQL_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWSQL_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWSQL_PWD: ${{ secrets.SNOWFLAKE_PWD }}
+          SNOWSQL_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWSQL_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWSQL_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+          SNOWSQL_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+        run: |
+          for file in sql/*.sql; do
+            echo "Deploying $file ..."
+            ./snowsql -a $SNOWSQL_ACCOUNT -u $SNOWSQL_USER -p $SNOWSQL_PWD \
+              -r $SNOWSQL_ROLE -w $SNOWSQL_WAREHOUSE \
+              -d $SNOWSQL_DATABASE -s $SNOWSQL_SCHEMA \
+              -f "$file"
+          done
