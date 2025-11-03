@@ -1,0 +1,64 @@
+name: Snowflake CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+      - main   # Deploy to PROD after approval
+
+env:
+  SNOWSQL_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+  SNOWSQL_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+  SNOWSQL_USER: ${{ secrets.SNOWFLAKE_USER }}
+  SNOWSQL_PWD: ${{ secrets.SNOWFLAKE_PWD }}
+  SNOWSQL_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # ✅ Add a manual approval gate for PROD
+    environment:
+      name: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+      url: https://app.snowflake.com/${{ secrets.SNOWFLAKE_ACCOUNT }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install SnowSQL
+        run: |
+          echo "Installing SnowSQL..."
+          curl -O https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/snowsql-1.2.28
+          chmod +x snowsql-1.2.28
+          mv snowsql-1.2.28 snowsql
+          ./snowsql --version
+
+      - name: Set target database/schema
+        id: envsetup
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "database=PROD_DB" >> $GITHUB_OUTPUT
+            echo "schema=PUBLIC" >> $GITHUB_OUTPUT
+          else
+            echo "database=DEV_DB" >> $GITHUB_OUTPUT
+            echo "schema=PUBLIC" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy SQL files to Snowflake
+        env:
+          SNOWSQL_DATABASE: ${{ steps.envsetup.outputs.database }}
+          SNOWSQL_SCHEMA: ${{ steps.envsetup.outputs.schema }}
+        run: |
+          set -e  # stop if any SQL fails
+          for file in sql/*.sql; do
+            echo "⏫ Deploying $file to $SNOWSQL_DATABASE.$SNOWSQL_SCHEMA ..."
+            ./snowsql -a $SNOWSQL_ACCOUNT -u $SNOWSQL_USER -p $SNOWSQL_PWD \
+              -r $SNOWSQL_ROLE -w $SNOWSQL_WAREHOUSE \
+              -d $SNOWSQL_DATABASE -s $SNOWSQL_SCHEMA \
+              -o exit_on_error=true -f "$file"
+          done
+
+      - name: Confirm Deployment
+        run: |
+          echo "✅ Deployment complete for branch ${GITHUB_REF_NAME}"
